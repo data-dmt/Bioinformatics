@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Simulador interactivo de replicación, transcripción y traducción.">
+  <title>Simulador Dogma Central</title>
+  <link rel="stylesheet" href="/style.css">
+  <script defer src="/diagrams.js"></script>
+  <script defer src="/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="Inicio">
+      <span class="brand-copy"><strong>Simulador Dogma Central</strong><small>Explorador bioinformático interactivo</small></span>
+    </a>
+    <span class="authors">ADRIANA PEÑATE · DIEGO MUÑOZ</span>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">ADN · ARN · PROTEÍNA</p>
+        <h1><span>Explora el flujo de la</span><span>información genética</span></h1>
+        <p class="lead">
+          Introduce una hebra codificante y observa cómo cambian las moléculas durante la
+          replicación, la transcripción y la traducción. Puedes reproducir cada proceso,
+          avanzar paso a paso y activar u ocultar etiquetas, enzimas y puentes de hidrógeno.
+        </p>
+      </div>
+
+      <div class="dogma-map" aria-label="Dogma central">
+        <div class="dogma-node dna-node"><span>ADN</span><small>almacenamiento de la información</small></div>
+        <div class="dogma-flow"><strong>transcripción</strong><span>→</span></div>
+        <div class="dogma-node rna-node"><span>ARNm</span><small>mensaje transcrito</small></div>
+        <div class="dogma-flow"><strong>traducción</strong><span>→</span></div>
+        <div class="dogma-node protein-node"><span>Proteína</span><small>producto funcional</small></div>
+        <div class="replication-loop"><span>↻</span><div><strong>Replicación</strong><small>ADN → ADN</small></div></div>
+      </div>
+
+      <details class="hero-details">
+        <summary>Casos especiales del flujo de información</summary>
+        <div class="mini-grid" id="special-cases-static">
+          <article><strong>ARN → ADN</strong><p>Transcripción inversa, por ejemplo en retrovirus.</p></article>
+          <article><strong>ARN → ARN</strong><p>Replicación del genoma de determinados virus de ARN.</p></article>
+          <article><strong>Proteína → proteína</strong><p>Herencia conformacional en priones; no es flujo genético clásico.</p></article>
+        </div>
+      </details>
+    </section>
+
+    <section class="input-card" aria-labelledby="input-title">
+      <div class="input-heading">
+        <div><p class="section-label">SECUENCIA DE TRABAJO</p><h2 id="input-title">Configura la simulación</h2></div>
+        <span class="model-chip">Modelo eucariota didáctico</span>
+      </div>
+
+      <form id="form">
+        <label for="sequence">Hebra codificante de ADN · 5′ → 3′</label>
+        <textarea id="sequence" rows="3" spellcheck="false" autocomplete="off" required aria-describedby="sequence-help">ATGCCATGGAATGCTTAA</textarea>
+        <div class="input-meta">
+          <small id="sequence-help">Solo A, T, C y G · admite espacios y minúsculas · máximo 600 bases.</small>
+          <span id="base-count">18 bases</span>
+        </div>
+
+        <div class="input-bottom">
+          <div class="examples">
+            <span>Ejemplos rápidos</span>
+            <button type="button" data-sequence="ATGCCATGGAATGCTTAA">Con STOP</button>
+            <button type="button" data-sequence="ATGCCATGGAATGCT">Sin STOP</button>
+            <button type="button" data-sequence="CCCGGGAATT">Sin AUG</button>
+          </div>
+          <label class="fragment-control" for="fragment-size">
+            <span>Okazaki</span>
+            <input id="fragment-size" type="number" min="1" max="50" value="5">
+            <small>bases por fragmento</small>
+          </label>
+        </div>
+
+        <button class="primary" id="simulate" type="submit">Iniciar explorador</button>
+        <p id="error" class="error" role="alert" hidden></p>
+      </form>
+    </section>
+
+    <p id="announcement" class="sr-only" aria-live="polite"></p>
+
+    <div id="results" hidden>
+      <section class="summary-card">
+        <div><p class="section-label">LECTURA RÁPIDA</p><h2>Resumen de la secuencia</h2></div>
+        <div id="overview" class="overview"></div>
+      </section>
+
+      <section class="explorer-shell" aria-labelledby="explorer-title">
+        <div class="explorer-header">
+          <div>
+            <p class="section-label">EXPLORADOR INTERACTIVO</p>
+            <h2 id="explorer-title">Visualiza el proceso paso a paso</h2>
+          </div>
+          <div class="stage-tabs" role="tablist" aria-label="Etapas del dogma central">
+            <button class="stage-tab active" type="button" role="tab" aria-selected="true" data-stage="replication"><span>01</span>Replicación</button>
+            <button class="stage-tab" type="button" role="tab" aria-selected="false" data-stage="transcription"><span>02</span>Transcripción</button>
+            <button class="stage-tab" type="button" role="tab" aria-selected="false" data-stage="translation"><span>03</span>Traducción</button>
+          </div>
+        </div>
+
+        <div class="sim-toolbar" aria-label="Controles de la animación">
+          <div class="playback-controls">
+            <button id="play-toggle" type="button" class="icon-button primary-control" aria-label="Reproducir">▶ <span>Reproducir</span></button>
+            <button id="step-forward" type="button" class="icon-button">→ <span>Paso</span></button>
+            <button id="reset-animation" type="button" class="icon-button">↺ <span>Reiniciar</span></button>
+          </div>
+
+          <label class="speed-control" for="animation-speed">
+            <span>Velocidad</span>
+            <select id="animation-speed">
+              <option value="0.65">0,5×</option>
+              <option value="1" selected>1×</option>
+              <option value="1.7">2×</option>
+              <option value="2.5">3×</option>
+            </select>
+          </label>
+
+          <div class="view-toggles" aria-label="Elementos visibles">
+            <label><input id="toggle-labels" type="checkbox" checked> Etiquetas</label>
+            <label><input id="toggle-enzymes" type="checkbox" checked> Enzimas</label>
+            <label><input id="toggle-bonds" type="checkbox" checked> Puentes</label>
+            <label><input id="toggle-narration" type="checkbox" checked> Explicación</label>
+          </div>
+        </div>
+
+        <div class="progress-row">
+          <div class="progress-track" aria-hidden="true"><span id="animation-progress"></span></div>
+          <span id="animation-counter">0 / 0</span>
+        </div>
+
+        <!-- REPLICACIÓN -->
+        <section class="stage-panel active" data-stage-panel="replication" role="tabpanel">
+          <div class="stage-intro">
+            <div><p class="stage-kicker">ADN → ADN</p><h3>Replicación semiconservativa</h3></div>
+            <p>
+              La helicasa abre el ADN; la primasa coloca cebadores; la ADN polimerasa sintetiza
+              hebras nuevas 5′ → 3′ y la ligasa completa la continuidad de la hebra rezagada.
+            </p>
+          </div>
+
+          <div class="concept-strip dna-strip">
+            <span><strong>A ↔ T</strong> 2 puentes H</span>
+            <span><strong>G ↔ C</strong> 3 puentes H</span>
+            <span><strong>Líder</strong> continua</span>
+            <span><strong>Rezagada</strong> Okazaki</span>
+          </div>
+
+          <div class="workbench">
+            <div id="replication-visual" class="visual-canvas" tabindex="0"></div>
+            <aside id="replication-narration" class="narration-card"></aside>
+          </div>
+
+          <div class="sequence-grid">
+            <article class="sequence-card"><div class="card-head"><h4>Hebra líder</h4><span>continua</span></div><pre id="leading"></pre></article>
+            <article class="sequence-card"><div class="card-head"><h4>Hebra rezagada</h4><span>discontinua</span></div><pre id="lagging"></pre></article>
+          </div>
+
+          <article class="data-block">
+            <div class="block-heading"><div><p class="section-label">CÁLCULO</p><h4>Fragmentos de Okazaki</h4></div><p>La numeración permite seguir qué parte del molde origina cada fragmento.</p></div>
+            <div id="fragments" class="fragments"></div>
+          </article>
+
+          <details class="academic-details">
+            <summary>Proceso molecular y enzimas principales</summary>
+            <div id="replication-steps" class="timeline"></div>
+            <h4 class="detail-subtitle">Participantes principales</h4>
+            <div id="replication-machinery" class="machinery-grid"></div>
+          </details>
+
+          <details class="academic-details">
+            <summary>Modelos de replicación y evidencia experimental</summary>
+            <div id="replication-models" class="models-grid"></div>
+            <p id="replication-evidence" class="evidence-note"></p>
+          </details>
+
+          <article class="data-block">
+            <p class="section-label">RESULTADO</p><h4>Moléculas hijas</h4>
+            <div id="daughters" class="sequence-grid"></div>
+          </article>
+        </section>
+
+        <!-- TRANSCRIPCIÓN -->
+        <section class="stage-panel" data-stage-panel="transcription" role="tabpanel" hidden>
+          <div class="stage-intro">
+            <div><p class="stage-kicker rna-color">ADN → ARN</p><h3>Transcripción</h3></div>
+            <p>
+              La ARN polimerasa reconoce una región de inicio, abre una burbuja de transcripción
+              y lee la hebra molde 3′ → 5′ mientras el ARN crece 5′ → 3′.
+            </p>
+          </div>
+
+          <div class="concept-strip rna-strip">
+            <span><strong>Molde</strong> 3′ → 5′</span>
+            <span><strong>ARN</strong> 5′ → 3′</span>
+            <span><strong>U</strong> sustituye a T</span>
+            <span><strong>Pre-ARNm</strong> se procesa en eucariotas</span>
+          </div>
+
+          <div class="workbench">
+            <div id="transcription-visual" class="visual-canvas" tabindex="0"></div>
+            <aside id="transcription-narration" class="narration-card"></aside>
+          </div>
+
+          <article class="sequence-card full-width">
+            <div class="card-head"><h4>Codificante, molde y ARN transcrito</h4><span>orientaciones explícitas</span></div>
+            <pre id="rna"></pre>
+          </article>
+
+          <details class="academic-details">
+            <summary>Iniciación, elongación, terminación y procesamiento</summary>
+            <div id="transcription-steps" class="timeline"></div>
+            <h4 class="detail-subtitle">Participantes principales</h4>
+            <div id="transcription-machinery" class="machinery-grid"></div>
+          </details>
+
+          <details class="academic-details">
+            <summary>Maduración del ARNm: cap 5′, poli-A y splicing</summary>
+            <div id="rna-processing" class="mini-grid processing-grid"></div>
+            <div id="intron-exon" class="two-column-note"></div>
+          </details>
+
+          <details class="academic-details">
+            <summary>ARNm, ARNt y ARNr</summary>
+            <div id="rna-types" class="mini-grid"></div>
+          </details>
+        </section>
+
+        <!-- TRADUCCIÓN -->
+        <section class="stage-panel" data-stage-panel="translation" role="tabpanel" hidden>
+          <div class="stage-intro">
+            <div><p class="stage-kicker protein-color">ARNm → POLIPÉPTIDO</p><h3>Traducción</h3></div>
+            <p>
+              El ribosoma lee codones de tres bases. Los ARNt aportan aminoácidos mediante
+              complementariedad codón–anticodón hasta que aparece una señal STOP.
+            </p>
+          </div>
+
+          <div class="concept-strip protein-strip">
+            <span><strong>Codón</strong> 3 bases</span>
+            <span><strong>Inicio</strong> AUG</span>
+            <span><strong>ARNt</strong> anticodón + aminoácido</span>
+            <span><strong>STOP</strong> UAA · UAG · UGA</span>
+          </div>
+
+          <div class="workbench">
+            <div id="translation-visual" class="visual-canvas" tabindex="0"></div>
+            <aside id="translation-narration" class="narration-card"></aside>
+          </div>
+
+          <article class="reader">
+            <div class="reader-heading"><div><p class="section-label">LECTURA INTERACTIVA</p><h4>Codón a codón</h4></div><span id="step-label" class="badge"></span></div>
+            <div id="codons" class="codons" role="group" aria-label="Codones traducidos"></div>
+            <div id="reading" class="reading-card" aria-live="polite"></div>
+            <div class="controls"><button id="previous" type="button">← Anterior</button><button id="next" type="button">Siguiente →</button></div>
+          </article>
+
+          <article class="data-block">
+            <p class="section-label">RESULTADO</p><h4 id="protein-title">Cadena polipeptídica</h4>
+            <div id="protein" class="protein"></div>
+            <p id="status" class="status"></p>
+          </article>
+
+          <details class="academic-details">
+            <summary>Iniciación, elongación y terminación</summary>
+            <div id="translation-steps" class="timeline"></div>
+            <h4 class="detail-subtitle">Participantes principales</h4>
+            <div id="translation-machinery" class="machinery-grid"></div>
+          </details>
+
+          <details class="academic-details">
+            <summary>Tabla de codones procesados</summary>
+            <div class="table-scroll" tabindex="0">
+              <table>
+                <thead><tr><th>N.º</th><th>Posición</th><th>Codón</th><th>Anticodón</th><th>Aminoácido / señal</th><th>Cadena</th></tr></thead>
+                <tbody id="translation-rows"></tbody>
+              </table>
+            </div>
+          </details>
+        </section>
+      </section>
+
+      <details class="limitations-card">
+        <summary>Supuestos y límites del simulador</summary>
+        <ol id="model-assumptions"></ol>
+      </details>
+    </div>
+
+  </main>
+
+  <footer><span>Simulador Dogma Central · Python + Biopython</span><span>Replicación · Transcripción · Traducción</span></footer>
+</body>
+</html>
