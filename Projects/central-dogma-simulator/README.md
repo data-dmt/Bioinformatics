@@ -24,7 +24,6 @@ La aplicación permite:
 - reproducir cada proceso automáticamente o avanzar paso a paso;
 - mostrar u ocultar etiquetas, enzimas, puentes de hidrógeno y explicaciones;
 - consultar contenido teórico complementario sin saturar la vista principal;
-- ejecutar la misma lógica desde terminal;
 - validar el comportamiento mediante pruebas automáticas.
 
 ## Procesos representados
@@ -125,7 +124,6 @@ Para la estimación de puentes de hidrógeno se consideran **2** para cada parej
 ├── biology_content.py
 ├── simulator.py
 ├── web_app.py
-├── main.py
 ├── requirements.txt
 ├── tests/
 │   └── test_simulator.py
@@ -150,7 +148,7 @@ Contiene el núcleo bioinformático. Sus responsabilidades principales son:
 - transcripción ADN → ARN;
 - traducción ARN → cadena polipeptídica;
 - cálculo de contenido GC y puentes de hidrógeno;
-- preparación de los resultados consumidos por la terminal y por la interfaz web.
+- preparación de los resultados consumidos por la interfaz web.
 
 ### `web_app.py`
 
@@ -161,10 +159,6 @@ POST /api/simulate
 ```
 
 La petición incluye la secuencia de ADN y el tamaño elegido para los fragmentos de Okazaki. La respuesta contiene los resultados de la simulación en formato JSON.
-
-### `main.py`
-
-Permite ejecutar el simulador desde terminal utilizando el mismo núcleo de cálculo que la interfaz web.
 
 ### `web/app.js`
 
@@ -285,12 +279,6 @@ Para iniciar el servidor sin abrir el navegador automáticamente:
 
 ```bash
 python web_app.py --no-browser
-```
-
-## Ejecución por terminal
-
-```bash
-python main.py
 ```
 
 ## Pruebas automáticas
